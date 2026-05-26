@@ -73,3 +73,27 @@ def test_gaussian_conserves_dose():
 def test_gaussian_peak_at_surface():
     result = solve_analytic(GAUSS_PARAMS)
     assert result.concentration[0] == result.concentration.max()
+
+
+def test_analytic_fdm_erfc_convergence():
+    """FDM and analytic erfc must agree within 5% at quarter-depth."""
+    params = DiffusionParams(
+        dopant="B",
+        temperature_C=1000.0,
+        time_s=3600.0,
+        profile="erfc",
+        depth_um=1.0,
+        surface_conc=1e20,
+        n_points=200,
+    )
+    result_a = solve_analytic(params)
+    result_n = solve_fdm(params)
+
+    # Compare at index 50 (~quarter depth), away from boundaries
+    idx = 50
+    C_a = result_a.concentration[idx]
+    C_n = np.interp(result_a.depth[idx], result_n.depth, result_n.concentration)
+
+    if C_a > 1e10:
+        rel_error = abs(C_a - C_n) / C_a
+        assert rel_error < 0.05, f"Analytic/FDM diverge by {rel_error:.1%}"

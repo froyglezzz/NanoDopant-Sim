@@ -45,5 +45,58 @@ def solve_analytic(params: DiffusionParams) -> DiffusionResult:
 
 
 def solve_fdm(params: DiffusionParams) -> DiffusionResult:
-    """Placeholder — implemented in Task 6."""
-    raise NotImplementedError("FDM solver not yet implemented")
+    """Explicit finite-difference solver (Fick's Second Law). CFL enforced automatically."""
+    D = compute_diffusivity(params.dopant, params.temperature_C)
+    depth_cm = params.depth_um * 1e-4
+    dx = depth_cm / (params.n_points - 1)
+
+    # CFL stability: D*dt/dx² <= 0.5 — use 0.4 for safety margin
+    dt = 0.4 * dx ** 2 / D
+    n_steps = max(1, int(params.time_s / dt))
+    snapshot_interval = max(1, n_steps // N_SNAPSHOTS)
+
+    x_cm = np.linspace(0.0, depth_cm, params.n_points)
+
+    # Initial condition
+    if params.profile == "erfc":
+        C = np.zeros(params.n_points)
+        C[0] = params.surface_conc
+    else:  # gaussian: all dose concentrated in first cell
+        C = np.zeros(params.n_points)
+        C[0] = params.surface_conc / dx
+
+    snapshots: list[np.ndarray] = []
+    time_list: list[float] = []
+    t = 0.0
+    r = D * dt / dx ** 2  # Fourier number (constant since D, dt, dx are fixed)
+
+    for step in range(n_steps):
+        if step % snapshot_interval == 0:
+            snapshots.append(C.copy())
+            time_list.append(t)
+
+        C_new = C.copy()
+        C_new[1:-1] = C[1:-1] + r * (C[2:] - 2.0 * C[1:-1] + C[:-2])
+
+        if params.profile == "erfc":
+            C_new[0] = params.surface_conc   # Dirichlet BC: constant surface source
+        else:
+            C_new[0] = C_new[1]              # Neumann BC: zero flux at surface
+
+        C_new[-1] = C_new[-2]                # Neumann BC: zero flux at bottom
+        C = C_new
+        t += dt
+
+    snapshots.append(C.copy())
+    time_list.append(params.time_s)
+
+    depth_um = x_cm * 1e4
+    return DiffusionResult(
+        depth=depth_um,
+        concentration=C,
+        time_snapshots=snapshots,
+        time_points=np.array(time_list),
+        D_eff=D,
+        junction_depth_um=_junction_depth(depth_um, C),
+        params=params,
+    )
