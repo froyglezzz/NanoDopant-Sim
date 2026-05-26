@@ -2,6 +2,10 @@
 
 A TCAD-grade dopant diffusion simulator for silicon substrates, implementing Fick's Second Law with Arrhenius diffusivity, erfc and Gaussian profile models, an FDM numerical solver, interactive Plotly visualizations, and a full argparse CLI.
 
+![Boron diffusion profile evolution at 1000°C](docs/images/boron_evolution.gif)
+
+*Boron diffusion in silicon at 1000 °C — profile evolution over a 1-hour anneal (erfc, infinite source, C_s = 10²⁰ cm⁻³).*
+
 ---
 
 ## Quick Start
@@ -17,6 +21,12 @@ python -m cli.main --dopant P --temp 950 --time 1800 --profile gaussian --solver
 ```
 
 Outputs are written to a timestamped directory: `output_<DOPANT>_<TEMP>C_<TIME>s/`
+
+### Sample Output — Static Profile
+
+![Boron concentration profile](docs/images/boron_profile.png)
+
+*Final concentration profile after 3600 s at 1000 °C. The dashed red line marks the junction depth x_j where C drops to the 10¹⁶ cm⁻³ background doping level.*
 
 ---
 
@@ -154,6 +164,10 @@ At the 2nm node (GAAFET/nanosheet architectures), source and drain extensions ar
 - **Short-channel effect (SCE) suppression** — abrupt concentration gradients at the metallurgical junction reduce drain-induced barrier lowering (DIBL) and threshold voltage roll-off.
 - **Thermal budget management** — the Arrhenius model reveals the sensitivity of $D$ to temperature; a 50 °C reduction at 1000 °C decreases $D_B$ by approximately 40%, directly constraining process integration choices.
 - **Series resistance** — the Gaussian profile model applies to ultra-shallow junction formation after low-energy implantation, where preserving peak surface concentration minimizes contact resistance.
+
+![Anneal condition comparison vs 2nm node target](docs/images/anneal_comparison.png)
+
+*Three anneal scenarios compared against the 2nm-node junction depth target (x_j < 10 nm, vertical dotted line). A conventional 1-hour drive-in at 1000 °C overshoots the target by an order of magnitude — quantitatively illustrating why millisecond-class spike RTP is now standard practice in leading-edge CMOS.*
 
 ---
 
